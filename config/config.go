@@ -2,10 +2,12 @@ package config
 
 import (
 	"context"
-	"log"
+	"os"
+
 	"sync"
 
 	"github.com/sethvargo/go-envconfig"
+	log "github.com/sirupsen/logrus"
 )
 
 var once sync.Once
@@ -32,4 +34,21 @@ func New() *Config {
 	}
 	once.Do(proccess)
 	return c
+}
+
+// SetupLogger ...
+func SetupLogger(level string) {
+	log.SetOutput(os.Stdout)
+	log.SetFormatter(&log.TextFormatter{
+		ForceColors:   true,
+		FullTimestamp: true,
+	})
+	switch level {
+	case "INFO":
+		log.SetLevel(log.InfoLevel)
+	case "DEBUG":
+		log.SetLevel(log.DebugLevel)
+	default:
+		log.SetLevel(log.DebugLevel)
+	}
 }

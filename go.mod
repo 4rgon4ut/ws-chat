@@ -10,6 +10,7 @@ require (
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/savsgio/gotils v0.0.0-20210617111740-97865ed5a873 // indirect
 	github.com/sethvargo/go-envconfig v0.3.5 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/valyala/fasthttp v1.28.0 // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 )
