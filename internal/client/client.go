@@ -1,18 +1,21 @@
 package client
 
 import (
-	"github.com/gofiber/websocket/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/bestpilotingalaxy/ws-chat/internal/transport"
 )
 
 // Client ...
 type Client struct {
 	// The websocket connection.
-	conn *websocket.Conn
+	wsAdapter *transport.WSAdapter
 }
 
 // New ...
 func New() *Client {
-	log.Info()
 	return &Client{}
 }
+
+// func Connect() {
+// 	websocket.New()
+
+// }

@@ -27,33 +27,49 @@ type Server struct {
 
 // New gets config and creates server instance
 func New(cfg interface{}) *Server {
-	return &Server{}
+
+	return &Server{
+		ClientPool: make(map[*transport.WSAdapter]struct{}),
+		Register:   make(chan *websocket.Conn),
+		Broadcast:  make(chan []byte),
+		Unregister: make(chan *transport.WSAdapter),
+	}
 }
 
 // Run ...
 func (s *Server) Run() {
 	for {
 		select {
+		//
 		case connection := <-s.Register:
+			log.Info("Recieved connection")
 			s.register(connection)
+		//
 		case message := <-s.Broadcast:
 			log.Debug("message received: ", message)
 			// Send the message to all clients
 			for adapter := range s.ClientPool {
-				adapter.SendCh <- message
+				select {
+				case adapter.SendCh <- message:
+				default:
+					close(adapter.SendCh)
+					delete(s.ClientPool, adapter)
+				}
 			}
 		case adapter := <-s.Unregister:
 			// Remove the client from the pool
-			delete(s.ClientPool, adapter)
-			log.Info("connection unregistered:", adapter)
+			if _, ok := s.ClientPool[adapter]; ok {
+				delete(s.ClientPool, adapter)
+				close(adapter.SendCh)
+			}
 		}
 	}
 }
 
 func (s *Server) register(conn *websocket.Conn) {
 	adapterWriteCh := make(chan []byte)
-	adapter := transport.NewWSAdapter(conn, s.Broadcast, adapterWriteCh)
+	adapter := transport.NewWSAdapter(conn, s.Broadcast, adapterWriteCh, s.Unregister)
 	s.ClientPool[adapter] = struct{}{}
 	log.Info("connection registered:", conn)
-	adapter.Serve(s.Unregister)
+	adapter.Serve()
 }

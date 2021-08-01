@@ -32,27 +32,26 @@ type WSAdapter struct {
 	conn   *websocket.Conn
 	ReadCh chan []byte
 	SendCh chan []byte
-	exitCh chan struct{}
+	exitCh chan *WSAdapter
 }
 
 // NewWSAdapter ...
-func NewWSAdapter(conn *websocket.Conn, rCh chan []byte, wCh chan []byte) *WSAdapter {
+func NewWSAdapter(conn *websocket.Conn, rCh chan []byte, wCh chan []byte, exitCh chan *WSAdapter) *WSAdapter {
 	return &WSAdapter{
 		conn:   conn,
 		ReadCh: rCh,
-		SendCh: wCh,
+		exitCh: exitCh,
 	}
 }
 
 //
-func (wa *WSAdapter) reading(exitCh chan *WSAdapter) {
+func (wa *WSAdapter) reading() {
 	defer func() {
-		exitCh <- wa
-		wa.conn.Close()
+		wa.exitCh <- wa
+
 	}()
 	wa.conn.SetReadLimit(maxMessageSize)
 	wa.conn.SetReadDeadline(time.Now().Add(pongWait))
-	wa.conn.SetPongHandler(func(string) error { wa.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		_, message, err := wa.conn.ReadMessage()
 		if err != nil {
@@ -70,7 +69,6 @@ func (wa *WSAdapter) writing() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		wa.conn.Close()
 	}()
 	for {
 		select {
@@ -111,7 +109,8 @@ func (wa *WSAdapter) writing() {
 // }
 
 // Serve ...
-func (wa *WSAdapter) Serve(exitCh chan *WSAdapter) {
-	go wa.reading(exitCh)
+func (wa *WSAdapter) Serve() {
+	go wa.reading()
 	go wa.writing()
+
 }
