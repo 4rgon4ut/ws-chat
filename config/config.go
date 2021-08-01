@@ -12,14 +12,21 @@ import (
 
 var once sync.Once
 
+// ConnHandler ...
+type ConnHandler struct {
+	MaxMsgSize   int
+	ReadDeadline int
+}
+
 // Server configuration
-type server struct {
+type Server struct {
 	Port string `env:"SERVER_PORT"`
 }
 
 // Config ...
 type Config struct {
-	Server   server
+	Server
+	ConnHandler
 	LogLevel string `env:"LOG_LEVEL"`
 }
 
