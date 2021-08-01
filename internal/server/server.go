@@ -1,26 +1,20 @@
 package server
 
 import (
-	"sync"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bestpilotingalaxy/ws-chat/config"
 	"github.com/bestpilotingalaxy/ws-chat/internal/transport"
-	"github.com/gofiber/websocket/v2"
-)
-
-var (
-	wg  sync.WaitGroup
-	mux sync.Mutex
 )
 
 // Server ...
 type Server struct {
 	ClientPool map[*transport.WSAdapter]struct{}
-	Register   chan *websocket.Conn
+	Register   chan *transport.WSAdapter
 	// TODO: specify broadcast message type
-	Broadcast  chan []byte
+	Broadcast  chan string
 	Unregister chan *transport.WSAdapter
 	cfg        *config.Config
 }
@@ -30,8 +24,8 @@ func New(cfg interface{}) *Server {
 
 	return &Server{
 		ClientPool: make(map[*transport.WSAdapter]struct{}),
-		Register:   make(chan *websocket.Conn),
-		Broadcast:  make(chan []byte),
+		Register:   make(chan *transport.WSAdapter),
+		Broadcast:  make(chan string),
 		Unregister: make(chan *transport.WSAdapter),
 	}
 }
@@ -40,36 +34,44 @@ func New(cfg interface{}) *Server {
 func (s *Server) Run() {
 	for {
 		select {
-		//
-		case connection := <-s.Register:
-			log.Info("Recieved connection")
-			s.register(connection)
-		//
+
+		case adapter := <-s.Register:
+			s.register(adapter)
+
 		case message := <-s.Broadcast:
-			log.Debug("message received: ", message)
-			// Send the message to all clients
-			for adapter := range s.ClientPool {
-				select {
-				case adapter.SendCh <- message:
-				default:
-					close(adapter.SendCh)
-					delete(s.ClientPool, adapter)
-				}
-			}
+			s.broadcastAll(message)
+
 		case adapter := <-s.Unregister:
-			// Remove the client from the pool
-			if _, ok := s.ClientPool[adapter]; ok {
-				delete(s.ClientPool, adapter)
-				close(adapter.SendCh)
-			}
+			s.unregister(adapter)
 		}
 	}
 }
 
-func (s *Server) register(conn *websocket.Conn) {
-	adapterWriteCh := make(chan []byte)
-	adapter := transport.NewWSAdapter(conn, s.Broadcast, adapterWriteCh, s.Unregister)
+// Notify chat members with text msg
+func (s *Server) notify(notification string) {
+	go func() {
+		s.Broadcast <- notification
+	}()
+}
+
+// Remove the client from the pool
+func (s *Server) unregister(adapter *transport.WSAdapter) {
+	if _, ok := s.ClientPool[adapter]; ok {
+		delete(s.ClientPool, adapter)
+	}
+}
+
+// Add new client adapter to pool
+func (s *Server) register(adapter *transport.WSAdapter) {
 	s.ClientPool[adapter] = struct{}{}
-	log.Info("connection registered:", conn)
-	adapter.Serve()
+	log.Infof("Client [%s] joined the pool", adapter)
+	s.notify(fmt.Sprintf("%s joined", adapter.Conn.RemoteAddr()))
+}
+
+// Send the message to all clients in pool
+func (s *Server) broadcastAll(message string) {
+	log.Debug("message received: ", message)
+	for adapter := range s.ClientPool {
+		go adapter.Write(message)
+	}
 }

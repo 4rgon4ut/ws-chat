@@ -1,11 +1,11 @@
 package transport
 
 import (
-	"bytes"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -29,88 +29,50 @@ const (
 
 // WSAdapter  ...
 type WSAdapter struct {
-	conn   *websocket.Conn
-	ReadCh chan []byte
-	SendCh chan []byte
+	Conn   *websocket.Conn
+	SendCh chan string
 	exitCh chan *WSAdapter
 }
 
 // NewWSAdapter ...
-func NewWSAdapter(conn *websocket.Conn, rCh chan []byte, wCh chan []byte, exitCh chan *WSAdapter) *WSAdapter {
+func NewWSAdapter(conn *websocket.Conn, sendCh chan string, exitCh chan *WSAdapter) *WSAdapter {
 	return &WSAdapter{
-		conn:   conn,
-		ReadCh: rCh,
+		Conn:   conn,
+		SendCh: sendCh,
 		exitCh: exitCh,
 	}
 }
 
-//
-func (wa *WSAdapter) reading() {
+// Listen ...
+func (wa *WSAdapter) Listen() {
 	defer func() {
 		wa.exitCh <- wa
-
+		wa.Conn.Close()
 	}()
-	wa.conn.SetReadLimit(maxMessageSize)
-	wa.conn.SetReadDeadline(time.Now().Add(pongWait))
+
 	for {
-		_, message, err := wa.conn.ReadMessage()
+		messageType, message, err := wa.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				log.Error("read error:", err)
 			}
-			break
+			log.Infof("connection with %s closed", wa.Conn.RemoteAddr())
+			return // Calls the deferred function, i.e. closes the connection on error
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		wa.ReadCh <- message
-	}
-}
-
-func (wa *WSAdapter) writing() {
-	ticker := time.NewTicker(pingPeriod)
-	defer func() {
-		ticker.Stop()
-	}()
-	for {
-		select {
-		case message, ok := <-wa.SendCh:
-			wa.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				// The hub closed the channel.
-				wa.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			w, err := wa.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			w.Write(message)
-			// Add queued chat messages to the current websocket message.
-			n := len(wa.SendCh)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-wa.SendCh)
-			}
-			if err := w.Close(); err != nil {
-				return
-			}
-		case <-ticker.C:
-			wa.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := wa.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
-			}
+		if messageType == websocket.TextMessage {
+			// Broadcast the received message
+			wa.SendCh <- fmt.Sprintf("[%s]: %s", wa.Conn.RemoteAddr(), message)
+		} else {
+			log.Error("websocket message received of type", messageType)
 		}
 	}
 }
 
-//
-// func (wa *WSAdapter) close() {
-
-// }
-
-// Serve ...
-func (wa *WSAdapter) Serve() {
-	go wa.reading()
-	go wa.writing()
-
+func (wa *WSAdapter) Write(message string) {
+	if err := wa.Conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+		log.Error("write error:", err)
+		wa.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+		wa.Conn.Close()
+		wa.exitCh <- wa
+	}
 }

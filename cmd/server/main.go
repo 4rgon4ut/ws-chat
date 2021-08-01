@@ -5,6 +5,7 @@ import (
 
 	"github.com/bestpilotingalaxy/ws-chat/config"
 	"github.com/bestpilotingalaxy/ws-chat/internal/server"
+	"github.com/bestpilotingalaxy/ws-chat/internal/transport"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -25,8 +26,10 @@ func main() {
 	go srv.Run()
 
 	router.Get("/ws", websocket.New(func(conn *websocket.Conn) {
-		log.Info("Registering: ", conn)
-		srv.Register <- conn
+		adapter := transport.NewWSAdapter(conn, srv.Broadcast, srv.Unregister)
+		// Register the client
+		srv.Register <- adapter
+		adapter.Listen()
 	}))
 	log.Fatal(router.Listen("0.0.0.0:3000"))
 }
