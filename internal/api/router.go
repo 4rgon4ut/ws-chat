@@ -27,5 +27,4 @@ func (r *Router) RunAPI() {
 	if err := r.Listen("0.0.0.0:" + r.Config.Port); err != nil {
 		log.Fatalf("Cant Start server due: %s", err)
 	}
-
 }

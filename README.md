@@ -1,0 +1,1 @@
+$   docker run --network host -it --entrypoint /bin/bash solsson/websocat
