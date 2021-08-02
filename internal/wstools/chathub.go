@@ -81,7 +81,7 @@ func (hub *ChatHub) unregister(adaptor *Adaptor) {
 // Add new client adapter to pool
 func (hub *ChatHub) register(adaptor *Adaptor) {
 	hub.ClientPool[adaptor] = struct{}{}
-	log.Infof("Client [%s] joined the pool", adaptor)
+	log.Infof("Client [%s] joined the pool", adaptor.Conn.RemoteAddr())
 	hub.notify(fmt.Sprintf("%s joined", adaptor.Conn.RemoteAddr()))
 }
 

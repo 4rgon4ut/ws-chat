@@ -5,6 +5,8 @@ import (
 
 	"github.com/bestpilotingalaxy/ws-chat/config"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 // Router ...
@@ -15,9 +17,20 @@ type Router struct {
 
 // NewRouter ...
 func NewRouter(c *config.Server) *Router {
-	r := fiber.New()
+	app := fiber.New()
+
+	// Default configuration fiber middlewares
+	// https://docs.gofiber.io/api/middleware/recover
+	app.Use(recover.New())
+	// https://docs.gofiber.io/api/middleware/logger
+	app.Use(logger.New(logger.Config{
+		Format:     "${pid} ${status} - ${method} ${path}\n",
+		TimeFormat: "02-Jan-2006",
+		TimeZone:   "Europe/Moscow",
+	}))
+
 	return &Router{
-		r,
+		app,
 		c,
 	}
 }
