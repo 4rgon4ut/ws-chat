@@ -15,7 +15,7 @@ type Router struct {
 	Config *config.Server
 }
 
-// NewRouter ...
+// NewRouter new fiber app with middlewares
 func NewRouter(c *config.Server) *Router {
 	app := fiber.New()
 
@@ -35,9 +35,9 @@ func NewRouter(c *config.Server) *Router {
 	}
 }
 
-// RunAPI ...
+// RunAPI start listen specified <addr:port>
 func (r *Router) RunAPI() {
 	if err := r.Listen("0.0.0.0:" + r.Config.Port); err != nil {
-		log.Fatalf("Cant Start server due: %s", err)
+		log.Fatalf("cant Start server due: %s", err)
 	}
 }

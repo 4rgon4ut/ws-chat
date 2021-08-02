@@ -17,7 +17,7 @@ type Server struct {
 	Port string `env:"SERVER_PORT"`
 }
 
-// Config ...
+// Config global config struct
 type Config struct {
 	Server
 	LogLevel string `env:"LOG_LEVEL"`

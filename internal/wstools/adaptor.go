@@ -7,7 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Adaptor  ...
+// Adaptor binds to single websocket connection and server it
+// send and read and fromat messages
 type Adaptor struct {
 	Conn   *websocket.Conn
 	SendCh chan string
@@ -23,7 +24,8 @@ func NewAdaptor(conn *websocket.Conn, sendCh chan string, exitCh chan *Adaptor) 
 	}
 }
 
-// Listen ...
+// Listen connection in a loop, brakes on error and send signal to hub unregister channel
+// than close connection
 func (ad *Adaptor) Listen() {
 	defer func() {
 		ad.exitCh <- ad
