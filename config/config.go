@@ -12,12 +12,6 @@ import (
 
 var once sync.Once
 
-// ConnHandler ...
-type ConnHandler struct {
-	MaxMsgSize   int
-	ReadDeadline int
-}
-
 // Server configuration
 type Server struct {
 	Port string `env:"SERVER_PORT"`
@@ -26,7 +20,6 @@ type Server struct {
 // Config ...
 type Config struct {
 	Server
-	ConnHandler
 	LogLevel string `env:"LOG_LEVEL"`
 }
 
@@ -34,12 +27,12 @@ type Config struct {
 func New() *Config {
 	ctx := context.Background()
 	c := &Config{}
-	proccess := func() {
+	process := func() {
 		if err := envconfig.Process(ctx, c); err != nil {
 			log.Fatal(err)
 		}
 	}
-	once.Do(proccess)
+	once.Do(process)
 	return c
 }
 
