@@ -15,12 +15,12 @@ func main() {
 	cfg := config.New()
 	config.SetupLogger(cfg.LogLevel)
 
-	api := api.NewRouter(&cfg.Server)
+	apiServer := api.NewRouter(&cfg.Server)
 	wsHub := wstools.NewHub(cfg.Server)
-	wsHub.AddRoutes(api.App)
+	apiServer.AddWSRoutes(wsHub)
 
 	go wsHub.Run()
-	go api.RunAPI()
+	go apiServer.RunAPI()
 
 	c := make(chan os.Signal, 1)
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
@@ -30,7 +30,7 @@ func main() {
 	// Block until we receive our signal.
 	<-c
 	wsHub.Interrupt <- struct{}{}
-	api.Shutdown()
+	apiServer.Shutdown()
 	log.Info("Good bye!")
 	os.Exit(0)
 }

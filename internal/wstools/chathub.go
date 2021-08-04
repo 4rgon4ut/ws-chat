@@ -3,8 +3,6 @@ package wstools
 import (
 	"fmt"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/websocket/v2"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bestpilotingalaxy/ws-chat/config"
@@ -55,26 +53,6 @@ SERVING_LOOP:
 			break SERVING_LOOP
 		}
 	}
-}
-
-// AddRoutes add websocket routes to server engine router
-func (hub *ChatHub) AddRoutes(app *fiber.App) *fiber.App {
-	// middleware chacks if connection upgraded
-	app.Use(func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) { // Returns true if the client requested upgrade to the WebSocket protocol
-			return c.Next()
-		}
-		return c.SendStatus(fiber.StatusUpgradeRequired)
-	})
-	// websocket connection hadler
-	app.Get("/ws", websocket.New(func(conn *websocket.Conn) {
-		// creates adaptor for websocket connection to serve it
-		adaptor := NewAdaptor(conn, hub.Broadcast, hub.Unregister)
-		// Register the client in hub
-		hub.Register <- adaptor
-		adaptor.Listen()
-	}))
-	return app
 }
 
 // Notify chat members with text msg
