@@ -46,8 +46,6 @@ func SetupLogger(level string) {
 	switch level {
 	case "INFO":
 		log.SetLevel(log.InfoLevel)
-	case "DEBUG":
-		log.SetLevel(log.DebugLevel)
 	default:
 		log.SetLevel(log.DebugLevel)
 	}
