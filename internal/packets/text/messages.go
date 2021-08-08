@@ -1,4 +1,4 @@
-package packets
+package text
 
 // Message ...
 type Message struct {

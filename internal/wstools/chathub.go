@@ -6,15 +6,18 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bestpilotingalaxy/ws-chat/config"
+	"github.com/bestpilotingalaxy/ws-chat/internal/packets/jrpc"
 )
 
 // ChatHub is hub for all connections
 type ChatHub struct {
+	JRPCRouter *jrpc.Router
 	// pool of adapters binded to websock connections
 	ClientPool map[*Adaptor]struct{}
 	Register   chan *Adaptor
 	// TODO: specify broadcast message type
 	Broadcast  chan string
+	JRPCchan   chan *jrpc.Request
 	Unregister chan *Adaptor
 	// using to stop hub Run() loop and close channels
 	Interrupt chan struct{}
@@ -23,11 +26,13 @@ type ChatHub struct {
 }
 
 // NewHub gets config and creates ChatHub instance
-func NewHub(cfg interface{}) *ChatHub {
+func NewHub(cfg interface{}, jrpcR *jrpc.Router) *ChatHub {
 	return &ChatHub{
+		JRPCRouter: jrpcR,
 		ClientPool: make(map[*Adaptor]struct{}),
 		Register:   make(chan *Adaptor),
 		Broadcast:  make(chan string),
+		JRPCchan:   make(chan *jrpc.Request),
 		Unregister: make(chan *Adaptor),
 		Interrupt:  make(chan struct{}, 1),
 	}
@@ -43,15 +48,26 @@ SERVING_LOOP:
 			hub.register(adapter)
 
 		case message := <-hub.Broadcast:
-			hub.broadcastAll(message)
+			hub.BroadcastToAll(message)
 
 		case adapter := <-hub.Unregister:
 			hub.unregister(adapter)
+
+		case jrpcReq := <-hub.JRPCchan:
+			hub.processJRPC(jrpcReq)
 
 		case <-hub.Interrupt:
 			hub.close()
 			break SERVING_LOOP
 		}
+	}
+}
+
+// BroadcastToAll send the message to all clients in pool
+func (hub *ChatHub) BroadcastToAll(message string) {
+	log.Debug("message received: ", message)
+	for adapter := range hub.ClientPool {
+		go adapter.Write(message)
 	}
 }
 
@@ -76,12 +92,14 @@ func (hub *ChatHub) register(adaptor *Adaptor) {
 	hub.notify(fmt.Sprintf("%s joined", adaptor.Conn.RemoteAddr()))
 }
 
-// Send the message to all clients in pool
-func (hub *ChatHub) broadcastAll(message string) {
-	log.Debug("message received: ", message)
-	for adapter := range hub.ClientPool {
-		go adapter.Write(message)
+// Process jrpc request, check if called method exists and run it
+func (hub *ChatHub) processJRPC(req *jrpc.Request) {
+	log.Debug("recieved JRPC call: ", req)
+	if err := hub.JRPCRouter.CheckMethodExist(req); err != nil {
+		log.Error("unsupported function called: %s", err)
+		return
 	}
+	go hub.JRPCRouter.Process(req)
 }
 
 // Close hub unbuffered channels
@@ -90,5 +108,4 @@ func (hub *ChatHub) close() {
 	close(hub.Register)
 	close(hub.Unregister)
 	log.Info("hub channels closed...")
-
 }
