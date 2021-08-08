@@ -56,7 +56,7 @@ func (r *Router) AddWSRoutes(hub *wstools.ChatHub) {
 	// websocket connection hadler
 	r.Get("/ws", websocket.New(func(conn *websocket.Conn) {
 		// creates adaptor for websocket connection to serve it
-		adaptor := wstools.NewAdaptor(conn, hub.Broadcast, hub.Unregister)
+		adaptor := wstools.NewAdaptor(conn, hub.Broadcast, hub.JRPCchan, hub.Unregister)
 		// Register the client in hub
 		hub.Register <- adaptor
 		adaptor.Listen()
