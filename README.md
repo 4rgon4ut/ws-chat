@@ -16,17 +16,29 @@
         
         docker run  --network host  --env-file=.env  ws-chat-server:latest
 
-### Starting client
+### Starting client 
         
         docker run  --network host --env-file=.env  -it --entrypoint  /bin/bash  solsson/websocat
         
+#### Text messages
+
 From container shell:
 
         websocat ws://0.0.0.0:$SERVER_PORT/ws
 
+#### JRPC calls
+
+         websocat --jsonrpc -b ws://0.0.0.0:$SERVER_PORT/ws
+         
+message format: 
+            
+         BroadcastToAll "hello"
+(now only `BroadcastToAll` method supported)
+
+
 
 # Structure 
-![image](https://user-images.githubusercontent.com/59182467/127800515-bc5ed38d-ceda-40b4-8063-5caeb63b8eb8.png)
+![image](https://user-images.githubusercontent.com/59182467/128648205-88b0217a-f0ff-4169-a102-dd12322a35ce.png)
 
 
 
