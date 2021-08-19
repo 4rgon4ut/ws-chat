@@ -1,13 +1,20 @@
 
 
 
-Fiber based websocket nonblocking echo-chat server.
+# Fiber based websocket nonblocking echo-chat server.
+(with JSON-RPC example)
+
+&nbsp;
+
+
 
 # Download
       
       git clone git@github.com:bestpilotingalaxy/ws-chat.git
       
       cd ws-chat
+
+&nbsp;
 
 # Starting server
 *change `.env` if necessary
@@ -16,6 +23,9 @@ Fiber based websocket nonblocking echo-chat server.
         
         
         docker run  --network host  --env-file=.env  ws-chat-server:latest
+
+
+&nbsp;
 
 # Starting client 
         
@@ -38,10 +48,13 @@ message format:
 
 
 
+&nbsp;
+
 # Structure 
 ![image](https://user-images.githubusercontent.com/59182467/128648205-88b0217a-f0ff-4169-a102-dd12322a35ce.png)
 
 
+&nbsp;
 
 # Debug
 
